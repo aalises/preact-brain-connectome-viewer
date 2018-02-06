@@ -6,7 +6,8 @@ import {stylesheet} from 'react-stylesheet-decorator'
 export default class ConnectomeView extends React.Component {
 
   state = {
-    dataChord: [],
+    connectomeData: [], //Matrix with the data
+    headerData: [], // Header Data [Label, Region]
     showChord: true
   }
 
@@ -15,16 +16,18 @@ export default class ConnectomeView extends React.Component {
   }
 
   private parseData(){
-    this.parseChordFromCSV();
+    this.parseLabelInfo();
+    this.parseDataFromCSV();
   }
 
-  private sortData(){ //Sorts the data anatomically based on the keys (from Right to Left)
-    var sortedArr = this.state.dataChord[0].map((col, i) => this.state.dataChord.map(row => row[i]));
+  //Sorts the data anatomically based on the keys (Right, SubRight, BrainStem, SubLeft, Left(Order of priority))
+  private sortData(){ 
+    
+    /*
+    var sortedArr = this.state.connectomeData[0].map((col, i) => this.state.connectomeData.map(row => row[i]));
     //Sort function
     sortedArr.sort(sortRegions);
-
     function sortRegions(a, b) {
-      //We codify the right regions to be a lower number so they are sorted first: Right: 1 , SubRight: 2, BrainStem: 3, SubLeft: 4, Left: 5
       var orientA = (a[0].slice(-1) === 'R') ? 1 : (a[0].slice(-1) === 'L') ? 3 : 2;
       var orientB = (b[0].slice(-1) === 'R') ? 1 : (b[0].slice(-1) === 'L') ? 3 : 2;
       if (orientA === orientB) {
@@ -35,32 +38,32 @@ export default class ConnectomeView extends React.Component {
       }
     }
     sortedArr = sortedArr[0].map((col, i) => sortedArr.map(row => row[i]));
-    this.setState({ dataChord: sortedArr});
+    this.setState({ connectomeData: sortedArr});
+    */
   }
 
-  private parseChordFromCSV(){
-    Papa.parse("https://raw.githubusercontent.com/aalises/ami-viewerData/master/connectome_final_norm.csv", {
+  private parseDataFromCSV(){
+    Papa.parse("https://raw.githubusercontent.com/aalises/ami-viewerData/master/connectome.csv", {
       download: true,
       dynamicTyping: true,
       skipEmptyLines: true,
-      complete: (results) => {
-        this.setState({ dataChord: results.data});
+      complete: (resultData) => {
+        this.setState({ connectomeData: resultData.data});
         this.sortData();
       }
     });
   }
 
-    private parseMatrixFromCSV(){
-      Papa.parse("https://raw.githubusercontent.com/aalises/ami-viewerData/master/connectome_final_norm.csv", {
-        download: true,
-        dynamicTyping: true,
-        skipEmptyLines: true,
-        header:true,
-        complete: (results) => {
-          this.setState({ dataMatrix: results.data });
-        }
-      });
-    }
+  private parseLabelInfo(){
+    Papa.parse("https://raw.githubusercontent.com/aalises/ami-viewerData/master/volumetric.csv", {
+      download: true,
+      dynamicTyping: true,
+      skipEmptyLines: true,
+      complete: (resultHeader) => {
+        this.setState({ headerData: resultHeader.data});
+      }
+    });
+  }
 
     componentDidMount() {
       this.parseData();
@@ -94,14 +97,13 @@ export default class ConnectomeView extends React.Component {
   `)
 
     public render(){
-      const [keys, ...rows] = this.state.dataChord;
       return (
         <div className="connectomeview">
-        {keys && rows &&
+        {this.state.headerData && this.state.connectomeData &&
             //Render the chord Diagram
             <ResponsiveChord className="connectomeview"
-            matrix={rows}
-            keys={keys}
+            matrix={this.state.connectomeData}
+            keys={this.state.headerData[0]}
             margin={{
                 "top": 0,
                 "right": 300,
