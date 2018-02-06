@@ -1,0 +1,47 @@
+{
+  "name": "bleeding-frontend-starter",
+  "version": "1.0.0",
+  "description": "Tiny starter with bleeding dependencies to enjoy frontend development",
+  "main": "none",
+  "scripts": {
+    "build": "webpack",
+    "start": "react-scripts start",
+    "prod": "webpack -p",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "webpack-dev-server --inline --hot --progress --content-base public"
+  },
+  "keywords": [
+    "starter",
+    "frontend",
+    "preact",
+    "redux",
+    "typescript"
+  ],
+  "author": "k1r0s",
+  "license": "MIT",
+  "dependencies": {
+    "@nivo/calendar": "^0.33.0",
+    "@nivo/heatmap": "^0.33.0",
+    "@types/react": "^16.0.36",
+    "http-decorator": "^1.0.10",
+    "lodash-es": "^4.17.5",
+    "nivo": "^0.31.0",
+    "papaparse": "^4.3.7",
+    "preact": "^8.2.7",
+    "preact-compat": "^3.18.0",
+    "preact-routlet": "^0.2.1",
+    "react": "^16.2.0",
+    "react-dom": "^16.2.0",
+    "react-scripts": "1.0.13",
+    "react-stylesheet-decorator": "0.0.5",
+    "redux-zero": "^4.4.2",
+    "stylesheet-decorator": "^1.4.1",
+    "typescript": "~2.5.3"
+  },
+  "devDependencies": {
+    "@nivo/chord": "^0.33.0",
+    "awesome-typescript-loader": "~3.2.3",
+    "webpack": "~3.8.1",
+    "webpack-dev-server": "~2.9.3"
+  }
+}
