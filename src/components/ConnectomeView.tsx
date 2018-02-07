@@ -7,9 +7,17 @@ export default class ConnectomeView extends React.Component {
 
   state = {
     connectomeData: [], //Matrix with the data
-    headerData: [], // Header Data [Label, Region]
+    labels: [], // Header Data [Label, Region]
+    groups: [],
     showChord: true
   }
+
+  //Groups of our connectome ordered by preference (clockwise starting from the top) on the chord diagram. Data pertaining to a group not here will be placed first
+  groups = ["Right","Subcortical-Right","Brainstem","Subcortical-Left","Left"];
+
+  //Util functions for getting a column of an array and transposing an array
+  arrayColumn = (arr, n) => arr.map(x => x[n]);
+  transpose = (data) => data[0].map((col, i) => data.map(row => row[i]));
 
   private toggleDiagrams() {
     this.setState({ showChord: !this.state.showChord });
@@ -20,26 +28,32 @@ export default class ConnectomeView extends React.Component {
     this.parseDataFromCSV();
   }
 
-  //Sorts the data anatomically based on the keys (Right, SubRight, BrainStem, SubLeft, Left(Order of priority))
+  private groupsorting = (a, b) => { //Note: Reorders rows of the matrix
+    var orientA = this.groups.indexOf(a[0]);
+    var orientB = this.groups.indexOf(b[0]);
+
+    return (orientA == orientB) ? 0 : (orientA < orientB) ? -1 : 1; 
+  }
+
+  /* 
+    Sorts the data anatomically based on the groups
+  */
   private sortData(){ 
+    var data = this.state.connectomeData.slice();
+    data.unshift(this.state.groups,this.state.labels);
+
+    data = this.transpose(data);
+    data.sort(this.groupsorting);
+
+    this.setState({groups : this.arrayColumn(data,0)});
+    this.setState({labels : this.arrayColumn(data,1)});
     
-    /*
-    var sortedArr = this.state.connectomeData[0].map((col, i) => this.state.connectomeData.map(row => row[i]));
-    //Sort function
-    sortedArr.sort(sortRegions);
-    function sortRegions(a, b) {
-      var orientA = (a[0].slice(-1) === 'R') ? 1 : (a[0].slice(-1) === 'L') ? 3 : 2;
-      var orientB = (b[0].slice(-1) === 'R') ? 1 : (b[0].slice(-1) === 'L') ? 3 : 2;
-      if (orientA === orientB) {
-        return 0;
-      }
-      else {
-        return (orientA < orientB) ? -1 : 1;
-      }
-    }
-    sortedArr = sortedArr[0].map((col, i) => sortedArr.map(row => row[i]));
-    this.setState({ connectomeData: sortedArr});
-    */
+    //Erase the labels and groups from the data
+    data = this.transpose(data).splice(2,data.length);
+    data = this.transpose(data);
+
+    this.setState({connectomeData: data});
+
   }
 
   private parseDataFromCSV(){
@@ -49,7 +63,7 @@ export default class ConnectomeView extends React.Component {
       skipEmptyLines: true,
       complete: (resultData) => {
         this.setState({ connectomeData: resultData.data});
-        this.sortData();
+        setTimeout(this.sortData(), 10000); //Move to promise!! FIXME
       }
     });
   }
@@ -59,8 +73,12 @@ export default class ConnectomeView extends React.Component {
       download: true,
       dynamicTyping: true,
       skipEmptyLines: true,
+
       complete: (resultHeader) => {
-        this.setState({ headerData: resultHeader.data});
+        var numResidualRows = 9; //On the volumetric CSV, the unused labels are the first 9 rows
+        var filteredArray = resultHeader.data.splice(numResidualRows,resultHeader.data.length - numResidualRows);
+        this.setState({ labels: this.arrayColumn(filteredArray,8)});
+        this.setState({ groups: this.arrayColumn(filteredArray,9)});
       }
     });
   }
@@ -99,11 +117,11 @@ export default class ConnectomeView extends React.Component {
     public render(){
       return (
         <div className="connectomeview">
-        {this.state.headerData && this.state.connectomeData &&
+        {this.state.labels.length && this.state.connectomeData.length &&
             //Render the chord Diagram
-            <ResponsiveChord className="connectomeview"
+            <ResponsiveChord
             matrix={this.state.connectomeData}
-            keys={this.state.headerData[0]}
+            keys={this.state.labels}
             margin={{
                 "top": 0,
                 "right": 300,
