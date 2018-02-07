@@ -144,8 +144,8 @@ export default class ConnectomeView extends React.Component<
       right: 0;
       bottom: 0;
       left: 0;
-      height: 90%;
-      width: 90%;
+      height: 100%;
+      width: 100%;
       z-index: 100;
       padding: 10px;
       font-family: "Trebuchet MS", Helvetica, sans-serif;
@@ -174,10 +174,10 @@ export default class ConnectomeView extends React.Component<
             matrix={this.state.currentData}
             keys={this.state.labels}
             margin={{
-              top: 0,
-              right: 300,
-              bottom: 40,
-              left: 300
+              top: 200,
+              right: 200,
+              bottom: 200,
+              left: 200
             }}
             pixelRatio={1}
             padAngle={0.03}
