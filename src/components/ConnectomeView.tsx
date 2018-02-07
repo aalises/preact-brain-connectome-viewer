@@ -3,7 +3,13 @@ import { ResponsiveChord } from "@nivo/chord";
 import * as Papa from "papaparse";
 import { stylesheet } from "react-stylesheet-decorator";
 
-export default class ConnectomeView extends React.Component {
+interface connectomeViewProps {
+  thres: number;
+}
+export default class ConnectomeView extends React.Component<
+  connectomeViewProps,
+  any
+> {
   state = {
     connectomeData: [], //Matrix with all the data
     currentData: [], //Current filtered matrix
@@ -11,7 +17,6 @@ export default class ConnectomeView extends React.Component {
     //Header Data [Labels, Regions]
     labels: [],
     groups: [],
-    threshold: 0.12, //Threshold of the data. The connections whose value are < won't be shown
     showChord: true
   };
 
@@ -37,7 +42,7 @@ export default class ConnectomeView extends React.Component {
       this.sortData(); //Sort the data once everything is loaded
       var filtData = this.filterDataThres(
         this.state.connectomeData.slice(),
-        this.state.threshold
+        this.props.thres
       );
       this.setState({ currentData: filtData });
     });
@@ -52,11 +57,7 @@ export default class ConnectomeView extends React.Component {
   };
 
   private filterDataThres(data, thres) {
-    var filteredData = data.map(row => {
-      return row.map(el => {
-        return el < thres ? 0 : el;
-      });
-    });
+    var filteredData = data.map(row => row.map(el => (el < thres ? 0 : el)));
     return filteredData;
   }
 
