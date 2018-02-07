@@ -6,8 +6,11 @@ import {stylesheet} from 'react-stylesheet-decorator'
 export default class ConnectomeView extends React.Component {
 
   state = {
-    connectomeData: [], //Matrix with the data
-    labels: [], // Header Data [Label, Region]
+    connectomeData: [], //Matrix with all the data
+    currentData: [], //Current filtered matrix
+
+    //Header Data [Labels, Regions]
+    labels: [],
     groups: [],
     showChord: true
   }
@@ -24,8 +27,9 @@ export default class ConnectomeView extends React.Component {
   }
 
   private parseData(){
-    this.parseLabelInfo();
-    this.parseDataFromCSV();
+    Promise.all([this.parseLabelInfo(),this.parseDataFromCSV()]).then(_ =>{
+      this.sortData(); //Sort the data once everything is loaded
+    });
   }
 
   private groupsorting = (a, b) => { //Note: Reorders rows of the matrix
@@ -66,33 +70,39 @@ export default class ConnectomeView extends React.Component {
     data = this.transpose(data.splice(2,data.length));
 
     this.setState({connectomeData: data});
+    this.setState({currentData: data});
 
   }
 
   private parseDataFromCSV(){
-    Papa.parse("https://raw.githubusercontent.com/aalises/ami-viewerData/master/connectome.csv", {
-      download: true,
-      dynamicTyping: true,
-      skipEmptyLines: true,
-      complete: (resultData) => {
-        this.setState({ connectomeData: resultData.data});
-        this.sortData(); //Move to promise!
-      }
+    return new Promise((resolve,reject) => {
+      Papa.parse("https://raw.githubusercontent.com/aalises/ami-viewerData/master/connectome.csv", {
+        download: true,
+        dynamicTyping: true,
+        skipEmptyLines: true,
+        complete: (resultData) => {
+          this.setState({ connectomeData: resultData.data});
+          resolve();
+        }
+      });
     });
   }
 
   private parseLabelInfo(){
-    Papa.parse("https://raw.githubusercontent.com/aalises/ami-viewerData/master/volumetric.csv", {
-      download: true,
-      dynamicTyping: true,
-      skipEmptyLines: true,
+    return new Promise((resolve,reject) => {
+      Papa.parse("https://raw.githubusercontent.com/aalises/ami-viewerData/master/volumetric.csv", {
+        download: true,
+        dynamicTyping: true,
+        skipEmptyLines: true,
 
-      complete: (resultHeader) => {
-        var numResidualRows = 9; //On the volumetric CSV, the unused labels are the first 9 rows
-        var filteredArray = resultHeader.data.splice(numResidualRows,resultHeader.data.length - numResidualRows);
-        this.setState({ labels: this.arrayColumn(filteredArray,8)});
-        this.setState({ groups: this.arrayColumn(filteredArray,9)});
-      }
+        complete: (resultHeader) => {
+          var numResidualRows = 9; //On the volumetric CSV, the unused labels are the first 9 rows
+          var filteredArray = resultHeader.data.splice(numResidualRows,resultHeader.data.length - numResidualRows);
+          this.setState({ labels: this.arrayColumn(filteredArray,8)});
+          this.setState({ groups: this.arrayColumn(filteredArray,9)});
+          resolve();
+        }
+      });
     });
   }
 
@@ -130,10 +140,10 @@ export default class ConnectomeView extends React.Component {
     public render(){
       return (
         <div className="connectomeview">
-        {this.state.labels.length && this.state.connectomeData.length &&
+        {this.state.labels.length && this.state.currentData.length &&
             //Render the chord Diagram
             <ResponsiveChord
-            matrix={this.state.connectomeData}
+            matrix={this.state.currentData}
             keys={this.state.labels}
             margin={{
                 "top": 0,
