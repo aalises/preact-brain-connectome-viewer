@@ -39,18 +39,31 @@ export default class ConnectomeView extends React.Component {
     Sorts the data anatomically based on the groups
   */
   private sortData(){ 
-    var data = this.state.connectomeData.slice();
-    data.unshift(this.state.groups,this.state.labels);
 
+    var groups = this.state.groups.slice();
+    var labels = this.state.labels.slice();
+    var data = this.state.connectomeData.slice();
+    data.unshift(groups,labels);
+
+    /* Sort the columns of the matrix and set the labels and regions */
     data = this.transpose(data);
     data.sort(this.groupsorting);
-
     this.setState({groups : this.arrayColumn(data,0)});
     this.setState({labels : this.arrayColumn(data,1)});
-    
-    //Erase the labels and groups from the data
-    data = this.transpose(data).splice(2,data.length);
     data = this.transpose(data);
+
+    /* Sort the rows of the matrix the same way to keep the matrix symmetric */
+    //First re-add the original labels and regions on the transposed matrix to do the row sorting
+    
+    data = this.transpose(data.splice(2,data.length));
+    data.unshift(groups,labels);
+
+    data = this.transpose(data); //At this point we have the original matrix with the two first columns our header
+    data.sort(this.groupsorting);
+    data = this.transpose(data);
+
+    //Erase the labels and groups from the data
+    data = this.transpose(data.splice(2,data.length));
 
     this.setState({connectomeData: data});
 
@@ -63,7 +76,7 @@ export default class ConnectomeView extends React.Component {
       skipEmptyLines: true,
       complete: (resultData) => {
         this.setState({ connectomeData: resultData.data});
-        setTimeout(this.sortData(), 10000); //Move to promise!! FIXME
+        this.sortData(); //Move to promise!
       }
     });
   }
