@@ -5,7 +5,10 @@ import { stylesheet } from "react-stylesheet-decorator";
 
 interface connectomeViewProps {
   thres: number;
+  groupsList: string[];
+  colorPalette: string[];
 }
+
 export default class ConnectomeView extends React.Component<
   connectomeViewProps,
   any
@@ -20,18 +23,12 @@ export default class ConnectomeView extends React.Component<
     showChord: true
   };
 
-  //Groups of our connectome ordered by preference (clockwise starting from the top) on the chord diagram. Data pertaining to a group not here will be placed first
-  groups = [
-    "Right",
-    "Subcortical-Right",
-    "Brainstem",
-    "Subcortical-Left",
-    "Left"
-  ];
+  colors = [] //Colors assigned to the labels
 
   //Util functions for getting a column of an array and transposing an array
   arrayColumn = (arr, n) => arr.map(x => x[n]);
   transpose = data => data[0].map((col, i) => data.map(row => row[i]));
+  generateColors = (groups) => groups.map((val,i) => this.props.colorPalette[this.props.groupsList.indexOf(val)]); //Create colors based on group from our color palette
 
   private toggleDiagrams() {
     this.setState({ showChord: !this.state.showChord });
@@ -39,7 +36,8 @@ export default class ConnectomeView extends React.Component<
 
   private parseData() {
     Promise.all([this.parseLabelInfo(), this.parseDataFromCSV()]).then(_ => {
-      this.sortData(); //Sort the data once everything is loaded
+      this.sortData(); //Sort the data, generate colors and filter once everything is loaded
+      this.colors = this.generateColors(this.state.groups);
       var filtData = this.filterDataThres(
         this.state.connectomeData.slice(),
         this.props.thres
@@ -50,8 +48,8 @@ export default class ConnectomeView extends React.Component<
 
   private groupsorting = (a, b) => {
     //Note: Reorders rows of the matrix
-    var orientA = this.groups.indexOf(a[0]);
-    var orientB = this.groups.indexOf(b[0]);
+    var orientA = this.props.groupsList.indexOf(a[0]);
+    var orientB = this.props.groupsList.indexOf(b[0]);
 
     return orientA == orientB ? 0 : orientA < orientB ? -1 : 1;
   };
@@ -194,7 +192,7 @@ export default class ConnectomeView extends React.Component<
             labelOffset={15}
             labelRotation={-90}
             labelTextColor="inherit:darker(1.7)"
-            colors="d320c"
+            colors={this.colors}
             isInteractive={true}
             arcHoverOpacity={1}
             arcHoverOthersOpacity={0.4}

@@ -3,6 +3,7 @@ import * as ReactDOM from "react-dom";
 import ConnectomeView from "./components/ConnectomeView";
 
 ReactDOM.render(
-  <ConnectomeView thres={0.12} />,
+  <ConnectomeView thres={0.12}   groupsList = {["Right","Subcortical-Right","Brainstem","Subcortical-Left","Left"]}
+  colorPalette = {["#800000","#e6b800","#669999","#00802b","#2a2aa2"]} />,
   document.getElementById("root")
 );
