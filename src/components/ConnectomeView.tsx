@@ -1,5 +1,6 @@
 import * as React from "react";
 import { ResponsiveChord } from "@nivo/chord";
+import { ResponsiveHeatMap } from "@nivo/heatmap";
 import * as Papa from "papaparse";
 import { stylesheet } from "react-stylesheet-decorator";
 
@@ -9,14 +10,11 @@ interface connectomeViewProps {
   colorPalette: string[];
 }
 
-export default class ConnectomeView extends React.Component<
-  connectomeViewProps,
-  any
-> {
+export default class ConnectomeView extends React.Component<connectomeViewProps,any> {
   state = {
     connectomeData: [], //Matrix with all the data
     currentData: [], //Current filtered matrix
-
+    connectomeDataMat: [],
     //Header Data [Labels, Regions]
     labels: [],
     groups: [],
@@ -36,13 +34,14 @@ export default class ConnectomeView extends React.Component<
 
   private parseData() {
     Promise.all([this.parseLabelInfo(), this.parseDataFromCSV()]).then(_ => {
+
       this.sortData(); //Sort the data, generate colors and filter once everything is loaded
       this.colors = this.generateColors(this.state.groups);
-      var filtData = this.filterDataThres(
-        this.state.connectomeData.slice(),
-        this.props.thres
-      );
+      var filtData = this.filterDataThres(this.state.connectomeData.slice(),this.props.thres);
       this.setState({ currentData: filtData });
+
+      //Parse the matrix data
+      this.setState({connectomeDataMat: this.convertToMatrixData(this.state.currentData)});
     });
   }
 
@@ -130,12 +129,26 @@ export default class ConnectomeView extends React.Component<
     });
   }
 
+  private convertToMatrixData(inputData){
+    //Parses the data so the Matrix can interpret it
+    return inputData.map((arr, index) => {
+
+      const row = {
+        "labelName": this.state.labels[index]
+      };
+
+      this.state.labels.forEach((key, indexLabel) =>{ row[key] = (arr[indexLabel] === 0) ? arr[indexLabel] : Number(arr[indexLabel].toFixed(2)) });
+      return row;
+     });
+
+     
+  }
+
   componentDidMount() {
     this.parseData();
   }
 
   @stylesheet(`
-
     .connectomeview {
       position: fixed;
       top: 0;
@@ -147,36 +160,29 @@ export default class ConnectomeView extends React.Component<
       z-index: 100;
       padding: 10px;
       font-family: "Trebuchet MS", Helvetica, sans-serif;
-      font-size: 12px !important;
+      font-size: 10px !important;
     }
 
     .connectomeview svg text {
       font-family: Trebuchet MS", Helvetica, sans-serif;
-      font-size: 12px !important;
+      font-size: 10px !important;
     }
-  
+
     connectomeview > div {
       overflow: hidden;
       display: flex;
     }
   `)
   public render() {
-    const dataReady = this.state.labels.length && this.state.currentData.length;
+    const dataReady = this.state.labels.length && this.state.currentData.length && this.state.connectomeDataMat.length;
 
     return (
       <div className="connectomeview">
         {!dataReady && <div> Data is loading </div>}
-        {dataReady && (
-          //Render the chord Diagram
-          <ResponsiveChord
+          {dataReady && this.state.showChord ? <ResponsiveChord
             matrix={this.state.currentData}
             keys={this.state.labels}
-            margin={{
-              top: 200,
-              right: 200,
-              bottom: 200,
-              left: 200
-            }}
+            margin={{top: 200,right: 200,bottom: 200,left: 200}}
             pixelRatio={1}
             padAngle={0.03}
             innerRadiusRatio={0.86}
@@ -199,8 +205,25 @@ export default class ConnectomeView extends React.Component<
             ribbonHoverOpacity={0.9}
             ribbonHoverOthersOpacity={0.1}
             animate={false}
-          />
-        )}
+          /> :   <ResponsiveHeatMap
+          data={this.state.connectomeDataMat}
+          keys={this.state.labels}
+          indexBy="labelName"
+          margin={{"top": 120,"right": 80,"bottom": 30,"left": 160}}
+          forceSquare={false}
+          axisTop={{"orient": "top","tickSize": 5,"tickPadding": 5,"tickRotation": -55,"legend": "","legendOffset": 36}}
+          axisLeft={{"orient": "left","tickSize": 5,"tickPadding": 5,"tickRotation": 0,"legend": "","legendPosition": "center","legendOffset": -40}}
+          cellShape="rect"
+          colors="nivo"
+          cellBorderColor="inherit:darker(1.2)"
+          labelTextColor="inherit:darker(0.8)"
+          defs={[{"id": "lines","type": "patternLines","background": "inherit","color": "rgba(0, 0, 0, 0.1)","rotation": -45,"lineWidth": 4,"spacing": 7}]}
+          fill={[{"id": "lines"}]}
+          animate={false}
+          hoverTarget="rowColumn"
+          cellHoverOthersOpacity={0.3}
+      />         
+          }       
       </div>
     );
   }
