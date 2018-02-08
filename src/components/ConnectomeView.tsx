@@ -13,11 +13,15 @@ interface connectomeViewProps {
 export default class ConnectomeView extends React.Component<connectomeViewProps,any> {
   state = {
     connectomeData: [], //Matrix with all the data
-    currentData: [], //Current filtered matrix
-    connectomeDataMat: [],
-    //Header Data [Labels, Regions]
     labels: [],
     groups: [],
+
+    //Filtered data
+    currentData: [],
+    currentLabels: [],
+    currentGroups: [],
+
+    connectomeDataMat: [], //current data parsed for the matrix
     showChord: true
   };
 
@@ -38,10 +42,9 @@ export default class ConnectomeView extends React.Component<connectomeViewProps,
       this.sortData(); //Sort the data, generate colors and filter once everything is loaded
       this.colors = this.generateColors(this.state.groups);
       var filtData = this.filterDataThres(this.state.connectomeData.slice(),this.props.thres);
-      this.setState({ currentData: filtData });
-
-      //Parse the matrix data
-      this.setState({connectomeDataMat: this.convertToMatrixData(this.state.currentData)});
+      this.setState({ currentData: filtData});
+      this.setState({ connectomeDataMat: this.convertToMatrixData(this.state.currentData)});
+      //this.filterDataGroup(["Right"]);
     });
   }
 
@@ -58,6 +61,58 @@ export default class ConnectomeView extends React.Component<connectomeViewProps,
     return filteredData;
   }
 
+  //Filter based on some group names
+  private filterDataGroup(groupNames){
+
+    var self = this;  
+    var groups = this.state.currentGroups.slice();
+    var labels = this.state.currentLabels.slice();
+    var filterData = this.state.currentData.slice();
+    filterData.unshift(groups, labels);
+
+    /* filter the columns of the matrix and set the labels and regions */
+    filterData = this.transpose(filterData);
+ 
+    //Filtering function
+    groupNames.forEach((group) =>{
+      filterData.forEach((el,idx) =>{
+        filterData[idx] = el.filter((value,i) => (self.state.groups[i] === group) ? false : true);
+       });
+    });
+  
+    this.setState({ 
+      currentGroups: this.arrayColumn(filterData, 0),
+      currentLabels: this.arrayColumn(filterData, 1) 
+    });
+
+    filterData = this.transpose(filterData);
+    /* Also filter the rows of the matrix the same way to keep the matrix symmetric */
+    //First re-add the original labels and regions on the transposed matrix to do the row sorting
+
+    filterData = this.transpose(filterData.splice(2, filterData.length));
+    filterData.unshift(groups, labels);
+
+    filterData = this.transpose(filterData); //At this point we have the original matrix with the two first columns our header
+    
+   //Filtering function
+   groupNames.forEach((group) =>{
+    filterData.forEach((el,idx) =>{
+      filterData[idx] = el.filter((value,i) => (self.state.groups[i] === group) ? false : true);
+     });
+  });
+
+    filterData = this.transpose(filterData);
+
+    //Erase the labels and groups from the data
+    filterData = this.transpose(filterData.splice(2, filterData.length));
+
+    this.setState({ currentData: filterData });
+  }
+
+  private filterDataLabel(data,labelsName){
+
+  }
+
   /* Sorts the data anatomically based on the groups */
   private sortData() {
     var groups = this.state.groups.slice();
@@ -68,10 +123,14 @@ export default class ConnectomeView extends React.Component<connectomeViewProps,
     /* Sort the columns of the matrix and set the labels and regions */
     data = this.transpose(data);
     data.sort(this.groupsorting);
-    this.setState({ groups: this.arrayColumn(data, 0) });
-    this.setState({ labels: this.arrayColumn(data, 1) });
-    data = this.transpose(data);
+    this.setState({ 
+      groups: this.arrayColumn(data, 0),
+      labels: this.arrayColumn(data, 1),
+      currentGroups: this.arrayColumn(data, 0),
+      currentLabels: this.arrayColumn(data, 1) 
+    });
 
+    data = this.transpose(data);
     /* Sort the rows of the matrix the same way to keep the matrix symmetric */
     //First re-add the original labels and regions on the transposed matrix to do the row sorting
 
@@ -120,8 +179,10 @@ export default class ConnectomeView extends React.Component<connectomeViewProps,
               numResidualRows,
               resultHeader.data.length - numResidualRows
             );
-            this.setState({ labels: this.arrayColumn(filteredArray, 8) });
-            this.setState({ groups: this.arrayColumn(filteredArray, 9) });
+            this.setState({ 
+              labels: this.arrayColumn(filteredArray, 8),
+              groups: this.arrayColumn(filteredArray, 9)
+             });
             resolve();
           }
         }
@@ -174,14 +235,14 @@ export default class ConnectomeView extends React.Component<connectomeViewProps,
     }
   `)
   public render() {
-    const dataReady = this.state.labels.length && this.state.currentData.length && this.state.connectomeDataMat.length;
+    const dataReady = this.state.currentLabels.length && this.state.currentData.length && this.state.connectomeDataMat.length;
 
     return (
       <div className="connectomeview">
         {!dataReady && <div> Data is loading </div>}
           {dataReady && this.state.showChord ? <ResponsiveChord
             matrix={this.state.currentData}
-            keys={this.state.labels}
+            keys={this.state.currentLabels}
             margin={{top: 200,right: 200,bottom: 200,left: 200}}
             pixelRatio={1}
             padAngle={0.03}
@@ -207,7 +268,7 @@ export default class ConnectomeView extends React.Component<connectomeViewProps,
             animate={false}
           /> :   <ResponsiveHeatMap
           data={this.state.connectomeDataMat}
-          keys={this.state.labels}
+          keys={this.state.currentLabels}
           indexBy="labelName"
           margin={{"top": 120,"right": 80,"bottom": 30,"left": 160}}
           forceSquare={false}
