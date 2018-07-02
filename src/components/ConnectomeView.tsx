@@ -1,8 +1,9 @@
-import * as React from "react";
+import { h, Component } from "preact";
 import { ResponsiveChord } from "@nivo/chord";
-import { ResponsiveHeatMap } from "@nivo/heatmap";
+import { ResponsiveHeatMap } from "@nivo/chord";
+
 import * as Papa from "papaparse";
-import { stylesheet } from "react-stylesheet-decorator";
+import { stylesheet } from "stylesheet-decorator";
 
 interface connectomeViewProps {
   thres: number;
@@ -10,7 +11,7 @@ interface connectomeViewProps {
   colorPalette: string[];
 }
 
-export default class ConnectomeView extends React.Component<connectomeViewProps,any> {
+export default class ConnectomeView extends Component<connectomeViewProps,any> {
   state = {
     connectomeData: [], //Matrix with all the data
     labels: [],
