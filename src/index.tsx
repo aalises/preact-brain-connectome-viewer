@@ -3,7 +3,7 @@ import ConnectomeView from "./components/ConnectomeView";
 
 render(<ConnectomeView thres={0.12} 
   groupsList = {["Right","Subcortical-Right","Brainstem","Subcortical-Left","Left"]} 
-  colorPalette = {["#800000","#e6b800","#669999","#00802b","#2a2aa2"]} 
+  colorPalette = {["#357066","#d1c34f","#9c9ede","#c99231","#854034"]} 
   />,
   document.getElementById("root")
 );

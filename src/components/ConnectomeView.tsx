@@ -296,7 +296,7 @@ export default class ConnectomeView extends Component<connectomeViewProps,connec
             labelOffset={15}
             labelRotation={-90}
             labelTextColor="inherit:darker(1.7)"
-            colors={this.colors}
+            colors= {this.colors}
             isInteractive={true}
             arcHoverOpacity={0.9}
             arcHoverOthersOpacity={0.4}
