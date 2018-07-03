@@ -1,6 +1,6 @@
 # Preact Connectome Viewer
 
-Brain Connectome Viewer using React/Preact and Nivo,
+A Preact component which wraps a Brain Connectome (Chord diagram) Viewer using Nivo,
 
 ## Build
 

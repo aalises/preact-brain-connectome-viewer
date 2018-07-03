@@ -5,22 +5,40 @@ import { ResponsiveHeatMap } from "@nivo/chord";
 import * as Papa from "papaparse";
 import { stylesheet } from "stylesheet-decorator";
 
+//Our data matrix which contains the connections, the labels and the groups 
+interface DataMatrix {
+  data: number[],
+  labels: string[],
+  groups: string[]
+}
+
 interface connectomeViewProps {
   thres: number;
   groupsList: string[];
   colorPalette: string[];
 }
 
-export default class ConnectomeView extends Component<connectomeViewProps,any> {
-  state = {
-    connectomeData: [], //Matrix with all the data
-    labels: [],
-    groups: [],
+interface connectomeViewState {
+  filtered: DataMatrix;
+  original: DataMatrix
+  connectomeDataMat: number[],
+  showChord: boolean
+}
 
-    //Filtered data
-    currentData: [],
-    currentLabels: [],
-    currentGroups: [],
+
+export default class ConnectomeView extends Component<connectomeViewProps,connectomeViewState> {
+  state = {
+    filtered: {
+      data: [],
+      labels: [],
+      groups: []
+    },
+
+    original: {
+      data: [],
+      labels: [],
+      groups: []
+    },
 
     connectomeDataMat: [], //current data parsed for the matrix
     showChord: true
@@ -41,10 +59,10 @@ export default class ConnectomeView extends Component<connectomeViewProps,any> {
     Promise.all([this.parseLabelInfo(), this.parseDataFromCSV()]).then(_ => {
 
       this.sortData(); //Sort the data, generate colors and filter once everything is loaded
-      this.colors = this.generateColors(this.state.groups);
-      var filtData = this.filterDataThres(this.state.connectomeData.slice(),this.props.thres);
-      this.setState({ currentData: filtData});
-      this.setState({ connectomeDataMat: this.convertToMatrixData(this.state.currentData)});
+      this.colors = this.generateColors(this.state.original.groups);
+      var filtData = this.filterDataThres(this.state.original.data.slice(),this.props.thres);
+      this.setState(state => ({ filtered:{ ... this.state.filtered, data: filtData}}));
+      this.setState({ connectomeDataMat: this.convertToMatrixData(this.state.filtered.data)});
       //this.filterDataGroup(["Right"]);
     });
   }
@@ -66,9 +84,9 @@ export default class ConnectomeView extends Component<connectomeViewProps,any> {
   private filterDataGroup(groupNames){
 
     var self = this;  
-    var groups = this.state.currentGroups.slice();
-    var labels = this.state.currentLabels.slice();
-    var filterData = this.state.currentData.slice();
+    var groups = this.state.filtered.groups.slice();
+    var labels = this.state.filtered.labels.slice();
+    var filterData = this.state.filtered.data.slice();
     filterData.unshift(groups, labels);
 
     /* filter the columns of the matrix and set the labels and regions */
@@ -77,14 +95,17 @@ export default class ConnectomeView extends Component<connectomeViewProps,any> {
     //Filtering function
     groupNames.forEach((group) =>{
       filterData.forEach((el,idx) =>{
-        filterData[idx] = el.filter((value,i) => (self.state.groups[i] === group) ? false : true);
+        filterData[idx] = el.filter((value,i) => (self.state.original.groups[i] === group) ? false : true);
        });
     });
   
-    this.setState({ 
-      currentGroups: this.arrayColumn(filterData, 0),
-      currentLabels: this.arrayColumn(filterData, 1) 
-    });
+    this.setState(state =>({ 
+      filtered: {
+        ... this.state.filtered,
+        groups: this.arrayColumn(filterData, 0),
+        labels: this.arrayColumn(filterData, 1) 
+      }
+    }));
 
     filterData = this.transpose(filterData);
     /* Also filter the rows of the matrix the same way to keep the matrix symmetric */
@@ -98,7 +119,7 @@ export default class ConnectomeView extends Component<connectomeViewProps,any> {
    //Filtering function
    groupNames.forEach((group) =>{
     filterData.forEach((el,idx) =>{
-      filterData[idx] = el.filter((value,i) => (self.state.groups[i] === group) ? false : true);
+      filterData[idx] = el.filter((value,i) => (self.state.original.groups[i] === group) ? false : true);
      });
   });
 
@@ -107,7 +128,7 @@ export default class ConnectomeView extends Component<connectomeViewProps,any> {
     //Erase the labels and groups from the data
     filterData = this.transpose(filterData.splice(2, filterData.length));
 
-    this.setState({ currentData: filterData });
+    this.setState({ filtered: { ... this.state.filtered, data: filterData } });
   }
 
   private filterDataLabel(data,labelsName){
@@ -116,19 +137,25 @@ export default class ConnectomeView extends Component<connectomeViewProps,any> {
 
   /* Sorts the data anatomically based on the groups */
   private sortData() {
-    var groups = this.state.groups.slice();
-    var labels = this.state.labels.slice();
-    var data = this.state.connectomeData.slice();
+    var groups = this.state.original.groups.slice();
+    var labels = this.state.original.labels.slice();
+    var data = this.state.original.data.slice();
     data.unshift(groups, labels);
 
     /* Sort the columns of the matrix and set the labels and regions */
     data = this.transpose(data);
     data.sort(this.groupsorting);
     this.setState({ 
-      groups: this.arrayColumn(data, 0),
-      labels: this.arrayColumn(data, 1),
-      currentGroups: this.arrayColumn(data, 0),
-      currentLabels: this.arrayColumn(data, 1) 
+      original: {
+       ... this.state.original,
+       groups: this.arrayColumn(data, 0),
+       labels: this.arrayColumn(data, 1),
+      },
+      filtered:  {
+        ... this.state.filtered,
+        groups: this.arrayColumn(data, 0),
+        labels: this.arrayColumn(data, 1),
+       }
     });
 
     data = this.transpose(data);
@@ -145,7 +172,10 @@ export default class ConnectomeView extends Component<connectomeViewProps,any> {
     //Erase the labels and groups from the data
     data = this.transpose(data.splice(2, data.length));
 
-    this.setState({ connectomeData: data });
+    this.setState({ original: {
+      ... this.state.original,
+     data: data
+     } });
   }
 
   private parseDataFromCSV() {
@@ -157,7 +187,10 @@ export default class ConnectomeView extends Component<connectomeViewProps,any> {
           dynamicTyping: true,
           skipEmptyLines: true,
           complete: resultData => {
-            this.setState({ connectomeData: resultData.data });
+            this.setState({ original: {
+              ... this.state.original,
+              data: resultData.data
+            } });
             resolve();
           }
         }
@@ -181,8 +214,11 @@ export default class ConnectomeView extends Component<connectomeViewProps,any> {
               resultHeader.data.length - numResidualRows
             );
             this.setState({ 
-              labels: this.arrayColumn(filteredArray, 8),
-              groups: this.arrayColumn(filteredArray, 9)
+              original: {
+               ... this.state.original,
+               groups:  this.arrayColumn(filteredArray, 9),
+               labels: this.arrayColumn(filteredArray, 8),
+            }
              });
             resolve();
           }
@@ -196,10 +232,10 @@ export default class ConnectomeView extends Component<connectomeViewProps,any> {
     return inputData.map((arr, index) => {
 
       const row = {
-        "labelName": this.state.labels[index]
+        "labelName": this.state.original.labels[index]
       };
 
-      this.state.labels.forEach((key, indexLabel) =>{ row[key] = (arr[indexLabel] === 0) ? arr[indexLabel] : Number(arr[indexLabel].toFixed(2)) });
+      this.state.original.labels.forEach((key, indexLabel) =>{ row[key] = (arr[indexLabel] === 0) ? arr[indexLabel] : Number(arr[indexLabel].toFixed(2)) });
       return row;
      });
 
@@ -222,7 +258,7 @@ export default class ConnectomeView extends Component<connectomeViewProps,any> {
       z-index: 100;
       padding: 10px;
       font-family: "Trebuchet MS", Helvetica, sans-serif;
-      font-size: 10px !important;
+      font-size: 12px !important;
     }
 
     .connectomeview svg text {
@@ -236,14 +272,14 @@ export default class ConnectomeView extends Component<connectomeViewProps,any> {
     }
   `)
   public render() {
-    const dataReady = this.state.currentLabels.length && this.state.currentData.length && this.state.connectomeDataMat.length;
+    const dataReady = this.state.filtered.labels.length && this.state.filtered.data.length && this.state.connectomeDataMat.length;
 
     return (
       <div className="connectomeview">
         {!dataReady && <div> Data is loading </div>}
           {dataReady && this.state.showChord ? <ResponsiveChord
-            matrix={this.state.currentData}
-            keys={this.state.currentLabels}
+            matrix={this.state.filtered.data}
+            keys={this.state.filtered.labels}
             margin={{top: 200,right: 200,bottom: 200,left: 200}}
             pixelRatio={1}
             padAngle={0.03}
@@ -269,7 +305,7 @@ export default class ConnectomeView extends Component<connectomeViewProps,any> {
             animate={false}
           /> :   <ResponsiveHeatMap
           data={this.state.connectomeDataMat}
-          keys={this.state.currentLabels}
+          keys={this.state.filtered.labels}
           indexBy="labelName"
           margin={{"top": 120,"right": 80,"bottom": 30,"left": 160}}
           forceSquare={false}

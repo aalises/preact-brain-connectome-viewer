@@ -37458,6 +37458,14 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __assign = (this && this.__assign) || Object.assign || function(t) {
+    for (var s, i = 1, n = arguments.length; i < n; i++) {
+        s = arguments[i];
+        for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+            t[p] = s[p];
+    }
+    return t;
+};
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -37475,13 +37483,16 @@ var ConnectomeView = /** @class */ (function (_super) {
     function ConnectomeView() {
         var _this = _super !== null && _super.apply(this, arguments) || this;
         _this.state = {
-            connectomeData: [],
-            labels: [],
-            groups: [],
-            //Filtered data
-            currentData: [],
-            currentLabels: [],
-            currentGroups: [],
+            filtered: {
+                data: [],
+                labels: [],
+                groups: []
+            },
+            original: {
+                data: [],
+                labels: [],
+                groups: []
+            },
             connectomeDataMat: [],
             showChord: true
         };
@@ -37505,10 +37516,10 @@ var ConnectomeView = /** @class */ (function (_super) {
         var _this = this;
         Promise.all([this.parseLabelInfo(), this.parseDataFromCSV()]).then(function (_) {
             _this.sortData(); //Sort the data, generate colors and filter once everything is loaded
-            _this.colors = _this.generateColors(_this.state.groups);
-            var filtData = _this.filterDataThres(_this.state.connectomeData.slice(), _this.props.thres);
-            _this.setState({ currentData: filtData });
-            _this.setState({ connectomeDataMat: _this.convertToMatrixData(_this.state.currentData) });
+            _this.colors = _this.generateColors(_this.state.original.groups);
+            var filtData = _this.filterDataThres(_this.state.original.data.slice(), _this.props.thres);
+            _this.setState(function (state) { return ({ filtered: __assign({}, _this.state.filtered, { data: filtData }) }); });
+            _this.setState({ connectomeDataMat: _this.convertToMatrixData(_this.state.filtered.data) });
             //this.filterDataGroup(["Right"]);
         });
     };
@@ -37518,23 +37529,23 @@ var ConnectomeView = /** @class */ (function (_super) {
     };
     //Filter based on some group names
     ConnectomeView.prototype.filterDataGroup = function (groupNames) {
+        var _this = this;
         var self = this;
-        var groups = this.state.currentGroups.slice();
-        var labels = this.state.currentLabels.slice();
-        var filterData = this.state.currentData.slice();
+        var groups = this.state.filtered.groups.slice();
+        var labels = this.state.filtered.labels.slice();
+        var filterData = this.state.filtered.data.slice();
         filterData.unshift(groups, labels);
         /* filter the columns of the matrix and set the labels and regions */
         filterData = this.transpose(filterData);
         //Filtering function
         groupNames.forEach(function (group) {
             filterData.forEach(function (el, idx) {
-                filterData[idx] = el.filter(function (value, i) { return (self.state.groups[i] === group) ? false : true; });
+                filterData[idx] = el.filter(function (value, i) { return (self.state.original.groups[i] === group) ? false : true; });
             });
         });
-        this.setState({
-            currentGroups: this.arrayColumn(filterData, 0),
-            currentLabels: this.arrayColumn(filterData, 1)
-        });
+        this.setState(function (state) { return ({
+            filtered: __assign({}, _this.state.filtered, { groups: _this.arrayColumn(filterData, 0), labels: _this.arrayColumn(filterData, 1) })
+        }); });
         filterData = this.transpose(filterData);
         /* Also filter the rows of the matrix the same way to keep the matrix symmetric */
         //First re-add the original labels and regions on the transposed matrix to do the row sorting
@@ -37544,30 +37555,28 @@ var ConnectomeView = /** @class */ (function (_super) {
         //Filtering function
         groupNames.forEach(function (group) {
             filterData.forEach(function (el, idx) {
-                filterData[idx] = el.filter(function (value, i) { return (self.state.groups[i] === group) ? false : true; });
+                filterData[idx] = el.filter(function (value, i) { return (self.state.original.groups[i] === group) ? false : true; });
             });
         });
         filterData = this.transpose(filterData);
         //Erase the labels and groups from the data
         filterData = this.transpose(filterData.splice(2, filterData.length));
-        this.setState({ currentData: filterData });
+        this.setState({ filtered: __assign({}, this.state.filtered, { data: filterData }) });
     };
     ConnectomeView.prototype.filterDataLabel = function (data, labelsName) {
     };
     /* Sorts the data anatomically based on the groups */
     ConnectomeView.prototype.sortData = function () {
-        var groups = this.state.groups.slice();
-        var labels = this.state.labels.slice();
-        var data = this.state.connectomeData.slice();
+        var groups = this.state.original.groups.slice();
+        var labels = this.state.original.labels.slice();
+        var data = this.state.original.data.slice();
         data.unshift(groups, labels);
         /* Sort the columns of the matrix and set the labels and regions */
         data = this.transpose(data);
         data.sort(this.groupsorting);
         this.setState({
-            groups: this.arrayColumn(data, 0),
-            labels: this.arrayColumn(data, 1),
-            currentGroups: this.arrayColumn(data, 0),
-            currentLabels: this.arrayColumn(data, 1)
+            original: __assign({}, this.state.original, { groups: this.arrayColumn(data, 0), labels: this.arrayColumn(data, 1) }),
+            filtered: __assign({}, this.state.filtered, { groups: this.arrayColumn(data, 0), labels: this.arrayColumn(data, 1) })
         });
         data = this.transpose(data);
         /* Sort the rows of the matrix the same way to keep the matrix symmetric */
@@ -37579,7 +37588,7 @@ var ConnectomeView = /** @class */ (function (_super) {
         data = this.transpose(data);
         //Erase the labels and groups from the data
         data = this.transpose(data.splice(2, data.length));
-        this.setState({ connectomeData: data });
+        this.setState({ original: __assign({}, this.state.original, { data: data }) });
     };
     ConnectomeView.prototype.parseDataFromCSV = function () {
         var _this = this;
@@ -37589,7 +37598,7 @@ var ConnectomeView = /** @class */ (function (_super) {
                 dynamicTyping: true,
                 skipEmptyLines: true,
                 complete: function (resultData) {
-                    _this.setState({ connectomeData: resultData.data });
+                    _this.setState({ original: __assign({}, _this.state.original, { data: resultData.data }) });
                     resolve();
                 }
             });
@@ -37606,8 +37615,7 @@ var ConnectomeView = /** @class */ (function (_super) {
                     var numResidualRows = 9; //On the volumetric CSV, the unused labels are the first 9 rows
                     var filteredArray = resultHeader.data.splice(numResidualRows, resultHeader.data.length - numResidualRows);
                     _this.setState({
-                        labels: _this.arrayColumn(filteredArray, 8),
-                        groups: _this.arrayColumn(filteredArray, 9)
+                        original: __assign({}, _this.state.original, { groups: _this.arrayColumn(filteredArray, 9), labels: _this.arrayColumn(filteredArray, 8) })
                     });
                     resolve();
                 }
@@ -37619,9 +37627,9 @@ var ConnectomeView = /** @class */ (function (_super) {
         //Parses the data so the Matrix can interpret it
         return inputData.map(function (arr, index) {
             var row = {
-                "labelName": _this.state.labels[index]
+                "labelName": _this.state.original.labels[index]
             };
-            _this.state.labels.forEach(function (key, indexLabel) { row[key] = (arr[indexLabel] === 0) ? arr[indexLabel] : Number(arr[indexLabel].toFixed(2)); });
+            _this.state.original.labels.forEach(function (key, indexLabel) { row[key] = (arr[indexLabel] === 0) ? arr[indexLabel] : Number(arr[indexLabel].toFixed(2)); });
             return row;
         });
     };
@@ -37629,13 +37637,13 @@ var ConnectomeView = /** @class */ (function (_super) {
         this.parseData();
     };
     ConnectomeView.prototype.render = function () {
-        var dataReady = this.state.currentLabels.length && this.state.currentData.length && this.state.connectomeDataMat.length;
+        var dataReady = this.state.filtered.labels.length && this.state.filtered.data.length && this.state.connectomeDataMat.length;
         return (preact_1.h("div", { className: "connectomeview" },
             !dataReady && preact_1.h("div", null, " Data is loading "),
-            dataReady && this.state.showChord ? preact_1.h(chord_1.ResponsiveChord, { matrix: this.state.currentData, keys: this.state.currentLabels, margin: { top: 200, right: 200, bottom: 200, left: 200 }, pixelRatio: 1, padAngle: 0.03, innerRadiusRatio: 0.86, innerRadiusOffset: 0, arcOpacity: 1, arcBorderWidth: 1, arcBorderColor: "inherit:darker(0.2)", ribbonOpacity: 0.5, ribbonBorderWidth: 1, ribbonBorderColor: "inherit:darker(0.4)", enableLabel: true, label: "id", labelOffset: 15, labelRotation: -90, labelTextColor: "inherit:darker(1.7)", colors: this.colors, isInteractive: true, arcHoverOpacity: 1, arcHoverOthersOpacity: 0.4, ribbonHoverOpacity: 0.9, ribbonHoverOthersOpacity: 0.1, animate: false }) : preact_1.h(chord_2.ResponsiveHeatMap, { data: this.state.connectomeDataMat, keys: this.state.currentLabels, indexBy: "labelName", margin: { "top": 120, "right": 80, "bottom": 30, "left": 160 }, forceSquare: false, axisTop: { "orient": "top", "tickSize": 5, "tickPadding": 5, "tickRotation": -55, "legend": "", "legendOffset": 36 }, axisLeft: { "orient": "left", "tickSize": 5, "tickPadding": 5, "tickRotation": 0, "legend": "", "legendPosition": "center", "legendOffset": -40 }, cellShape: "rect", colors: "nivo", cellBorderColor: "inherit:darker(1.2)", labelTextColor: "inherit:darker(0.8)", defs: [{ "id": "lines", "type": "patternLines", "background": "inherit", "color": "rgba(0, 0, 0, 0.1)", "rotation": -45, "lineWidth": 4, "spacing": 7 }], fill: [{ "id": "lines" }], animate: false, hoverTarget: "rowColumn", cellHoverOthersOpacity: 0.3 })));
+            dataReady && this.state.showChord ? preact_1.h(chord_1.ResponsiveChord, { matrix: this.state.filtered.data, keys: this.state.filtered.labels, margin: { top: 200, right: 200, bottom: 200, left: 200 }, pixelRatio: 1, padAngle: 0.03, innerRadiusRatio: 0.86, innerRadiusOffset: 0, arcOpacity: 1, arcBorderWidth: 1, arcBorderColor: "inherit:darker(0.2)", ribbonOpacity: 0.5, ribbonBorderWidth: 1, ribbonBorderColor: "inherit:darker(0.4)", enableLabel: true, label: "id", labelOffset: 15, labelRotation: -90, labelTextColor: "inherit:darker(1.7)", colors: this.colors, isInteractive: true, arcHoverOpacity: 1, arcHoverOthersOpacity: 0.4, ribbonHoverOpacity: 0.9, ribbonHoverOthersOpacity: 0.1, animate: false }) : preact_1.h(chord_2.ResponsiveHeatMap, { data: this.state.connectomeDataMat, keys: this.state.filtered.labels, indexBy: "labelName", margin: { "top": 120, "right": 80, "bottom": 30, "left": 160 }, forceSquare: false, axisTop: { "orient": "top", "tickSize": 5, "tickPadding": 5, "tickRotation": -55, "legend": "", "legendOffset": 36 }, axisLeft: { "orient": "left", "tickSize": 5, "tickPadding": 5, "tickRotation": 0, "legend": "", "legendPosition": "center", "legendOffset": -40 }, cellShape: "rect", colors: "nivo", cellBorderColor: "inherit:darker(1.2)", labelTextColor: "inherit:darker(0.8)", defs: [{ "id": "lines", "type": "patternLines", "background": "inherit", "color": "rgba(0, 0, 0, 0.1)", "rotation": -45, "lineWidth": 4, "spacing": 7 }], fill: [{ "id": "lines" }], animate: false, hoverTarget: "rowColumn", cellHoverOthersOpacity: 0.3 })));
     };
     __decorate([
-        stylesheet_decorator_1.stylesheet("\n    .connectomeview {\n      position: fixed;\n      top: 0;\n      right: 0;\n      bottom: 0;\n      left: 0;\n      height: 100%;\n      width: 100%;\n      z-index: 100;\n      padding: 10px;\n      font-family: \"Trebuchet MS\", Helvetica, sans-serif;\n      font-size: 10px !important;\n    }\n\n    .connectomeview svg text {\n      font-family: Trebuchet MS\", Helvetica, sans-serif;\n      font-size: 10px !important;\n    }\n\n    connectomeview > div {\n      overflow: hidden;\n      display: flex;\n    }\n  ")
+        stylesheet_decorator_1.stylesheet("\n    .connectomeview {\n      position: fixed;\n      top: 0;\n      right: 0;\n      bottom: 0;\n      left: 0;\n      height: 100%;\n      width: 100%;\n      z-index: 100;\n      padding: 10px;\n      font-family: \"Trebuchet MS\", Helvetica, sans-serif;\n      font-size: 12px !important;\n    }\n\n    .connectomeview svg text {\n      font-family: Trebuchet MS\", Helvetica, sans-serif;\n      font-size: 10px !important;\n    }\n\n    connectomeview > div {\n      overflow: hidden;\n      display: flex;\n    }\n  ")
     ], ConnectomeView.prototype, "render", null);
     return ConnectomeView;
 }(preact_1.Component));
