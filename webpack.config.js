@@ -6,7 +6,7 @@ module.exports = {
   entry: path.join(__dirname, 'src', 'index.tsx'),
   plugins: [
     new HtmlWebpackPlugin({
-      template: path.join(__dirname, "dist", "index.html")
+      template: path.join(__dirname, ".", "index.html")
     })
   ],
   output: {

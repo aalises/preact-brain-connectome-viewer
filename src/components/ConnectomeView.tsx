@@ -286,7 +286,7 @@ export default class ConnectomeView extends Component<connectomeViewProps,connec
             innerRadiusRatio={0.86}
             innerRadiusOffset={0}
             arcOpacity={1}
-            arcBorderWidth={1}
+            arcBorderWidth={0.5}
             arcBorderColor="inherit:darker(0.2)"
             ribbonOpacity={0.5}
             ribbonBorderWidth={1}
@@ -298,9 +298,9 @@ export default class ConnectomeView extends Component<connectomeViewProps,connec
             labelTextColor="inherit:darker(1.7)"
             colors={this.colors}
             isInteractive={true}
-            arcHoverOpacity={1}
+            arcHoverOpacity={0.9}
             arcHoverOthersOpacity={0.4}
-            ribbonHoverOpacity={0.9}
+            ribbonHoverOpacity={0.7}
             ribbonHoverOthersOpacity={0.1}
             animate={false}
           /> :   <ResponsiveHeatMap
