@@ -13,7 +13,7 @@ interface DataMatrix {
 }
 
 interface connectomeViewProps {
-  thres: number;
+  thres?: number;
   groupsList: string[];
   colorPalette: string[];
 }
@@ -60,10 +60,9 @@ export default class ConnectomeView extends Component<connectomeViewProps,connec
 
       this.sortData(); //Sort the data, generate colors and filter once everything is loaded
       this.colors = this.generateColors(this.state.original.groups);
-      var filtData = this.filterDataThres(this.state.original.data.slice(),this.props.thres);
+      var filtData = this.filterDataThres(this.state.original.data.slice(),this.props.thres ? this.props.thres : 0.12);
       this.setState(state => ({ filtered:{ ... this.state.filtered, data: filtData}}));
       this.setState({ connectomeDataMat: this.convertToMatrixData(this.state.filtered.data)});
-      //this.filterDataGroup(["Right"]);
     });
   }
 
