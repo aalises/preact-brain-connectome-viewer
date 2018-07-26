@@ -7,7 +7,8 @@
     "build": "webpack",
     "prod": "webpack -p",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "webpack-dev-server --inline --hot --progress --content-base public"
+    "dev": "webpack-dev-server --inline --hot --progress --content-base public",
+    "lint": "lynt --typescript --react"
   },
   "keywords": [
     "frontend",
@@ -31,6 +32,7 @@
   },
   "devDependencies": {
     "awesome-typescript-loader": "~3.2.3",
+    "lynt": "^0.5.2",
     "react": "github:preact-compat/react",
     "react-dom": "github:preact-compat/react-dom",
     "webpack": "~3.8.1",

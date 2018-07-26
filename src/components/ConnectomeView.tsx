@@ -1,7 +1,5 @@
 import { h, Component } from "preact";
-import { ResponsiveChord } from "@nivo/chord";
-import { ResponsiveHeatMap } from "@nivo/chord";
-
+import { ResponsiveChord, ResponsiveHeatMap } from "@nivo/chord";
 import * as Papa from "papaparse";
 import { stylesheet } from "stylesheet-decorator";
 
@@ -13,7 +11,7 @@ interface DataMatrix {
 }
 
 interface connectomeViewProps {
-  thres?: number;
+  thres: number;
   groupsList: string[];
   colorPalette: string[];
 }
@@ -25,7 +23,6 @@ interface connectomeViewState {
   showChord: boolean
 }
 
-
 export default class ConnectomeView extends Component<connectomeViewProps,connectomeViewState> {
   state = {
     filtered: {
@@ -33,17 +30,14 @@ export default class ConnectomeView extends Component<connectomeViewProps,connec
       labels: [],
       groups: []
     },
-
     original: {
       data: [],
       labels: [],
       groups: []
     },
-
     connectomeDataMat: [], //current data parsed for the matrix
     showChord: true
   };
-
   colors = [] //Colors assigned to the labels
 
   //Util functions for getting a column of an array and transposing an array
@@ -56,46 +50,44 @@ export default class ConnectomeView extends Component<connectomeViewProps,connec
   }
 
   private parseData() {
-    Promise.all([this.parseLabelInfo(), this.parseDataFromCSV()]).then(_ => {
 
+    Promise.all([this.parseLabelInfo(), this.parseDataFromCSV()]).then(_ => {
       this.sortData(); //Sort the data, generate colors and filter once everything is loaded
       this.colors = this.generateColors(this.state.original.groups);
-      var filtData = this.filterDataThres(this.state.original.data.slice(),this.props.thres ? this.props.thres : 0.12);
+      const filtData = this.filterDataThres(this.state.original.data.slice(),this.props.thres);
       this.setState(state => ({ filtered:{ ... this.state.filtered, data: filtData}}));
       this.setState({ connectomeDataMat: this.convertToMatrixData(this.state.filtered.data)});
+      this.filterDataGroup(["Right"]);
     });
+
   }
 
   private groupsorting = (a, b) => {
     //Note: Reorders rows of the matrix
-    var orientA = this.props.groupsList.indexOf(a[0]);
-    var orientB = this.props.groupsList.indexOf(b[0]);
-
-    return orientA == orientB ? 0 : orientA < orientB ? -1 : 1;
+    const orientA = this.props.groupsList.indexOf(a[0]);
+    const orientB = this.props.groupsList.indexOf(b[0]);
+    return orientA === orientB ? 0 : orientA < orientB ? -1 : 1;
   };
 
   private filterDataThres(data, thres) {
-    var filteredData = data.map(row => row.map(el => (el < thres ? 0 : el)));
+    const filteredData = data.map(row => row.map(el => (el < thres ? 0 : el)));
     return filteredData;
   }
 
   //Filter based on some group names
   private filterDataGroup(groupNames){
+    const self = this;  
+    const groups = this.state.filtered.groups.slice();
+    const labels = this.state.filtered.labels.slice();
+    let filterData = this.state.filtered.data.slice();
 
-    var self = this;  
-    var groups = this.state.filtered.groups.slice();
-    var labels = this.state.filtered.labels.slice();
-    var filterData = this.state.filtered.data.slice();
     filterData.unshift(groups, labels);
-
     /* filter the columns of the matrix and set the labels and regions */
     filterData = this.transpose(filterData);
- 
+
     //Filtering function
     groupNames.forEach((group) =>{
-      filterData.forEach((el,idx) =>{
-        filterData[idx] = el.filter((value,i) => (self.state.original.groups[i] === group) ? false : true);
-       });
+      filterData.forEach((el,idx) => filterData[idx] = el.filter((_,i) => (self.state.original.groups[i] === group) ? false : true));
     });
   
     this.setState(state =>({ 
@@ -105,8 +97,9 @@ export default class ConnectomeView extends Component<connectomeViewProps,connec
         labels: this.arrayColumn(filterData, 1) 
       }
     }));
-
+    
     filterData = this.transpose(filterData);
+
     /* Also filter the rows of the matrix the same way to keep the matrix symmetric */
     //First re-add the original labels and regions on the transposed matrix to do the row sorting
 
@@ -115,30 +108,22 @@ export default class ConnectomeView extends Component<connectomeViewProps,connec
 
     filterData = this.transpose(filterData); //At this point we have the original matrix with the two first columns our header
     
-   //Filtering function
-   groupNames.forEach((group) =>{
-    filterData.forEach((el,idx) =>{
-      filterData[idx] = el.filter((value,i) => (self.state.original.groups[i] === group) ? false : true);
-     });
-  });
+    //Filtering function
+    groupNames.forEach((group) =>{
+      filterData.forEach((el,idx) => filterData[idx] = el.filter((_,i) => (self.state.original.groups[i] === group) ? false : true));
+    });
 
     filterData = this.transpose(filterData);
-
     //Erase the labels and groups from the data
     filterData = this.transpose(filterData.splice(2, filterData.length));
-
     this.setState({ filtered: { ... this.state.filtered, data: filterData } });
-  }
-
-  private filterDataLabel(data,labelsName){
-
   }
 
   /* Sorts the data anatomically based on the groups */
   private sortData() {
-    var groups = this.state.original.groups.slice();
-    var labels = this.state.original.labels.slice();
-    var data = this.state.original.data.slice();
+    const groups = this.state.original.groups.slice();
+    const labels = this.state.original.labels.slice();
+    let data = this.state.original.data.slice();
     data.unshift(groups, labels);
 
     /* Sort the columns of the matrix and set the labels and regions */
@@ -160,14 +145,11 @@ export default class ConnectomeView extends Component<connectomeViewProps,connec
     data = this.transpose(data);
     /* Sort the rows of the matrix the same way to keep the matrix symmetric */
     //First re-add the original labels and regions on the transposed matrix to do the row sorting
-
     data = this.transpose(data.splice(2, data.length));
     data.unshift(groups, labels);
-
     data = this.transpose(data); //At this point we have the original matrix with the two first columns our header
     data.sort(this.groupsorting);
     data = this.transpose(data);
-
     //Erase the labels and groups from the data
     data = this.transpose(data.splice(2, data.length));
 
@@ -207,8 +189,8 @@ export default class ConnectomeView extends Component<connectomeViewProps,connec
           skipEmptyLines: true,
 
           complete: resultHeader => {
-            var numResidualRows = 9; //On the volumetric CSV, the unused labels are the first 9 rows
-            var filteredArray = resultHeader.data.splice(
+            const numResidualRows = 9; //On the volumetric CSV, the unused labels are the first 9 rows
+            const filteredArray = resultHeader.data.splice(
               numResidualRows,
               resultHeader.data.length - numResidualRows
             );
@@ -229,16 +211,12 @@ export default class ConnectomeView extends Component<connectomeViewProps,connec
   private convertToMatrixData(inputData){
     //Parses the data so the Matrix can interpret it
     return inputData.map((arr, index) => {
-
       const row = {
         "labelName": this.state.original.labels[index]
       };
-
       this.state.original.labels.forEach((key, indexLabel) =>{ row[key] = (arr[indexLabel] === 0) ? arr[indexLabel] : Number(arr[indexLabel].toFixed(2)) });
       return row;
      });
-
-     
   }
 
   componentDidMount() {
@@ -272,11 +250,10 @@ export default class ConnectomeView extends Component<connectomeViewProps,connec
   `)
   public render() {
     const dataReady = this.state.filtered.labels.length && this.state.filtered.data.length && this.state.connectomeDataMat.length;
-
     return (
       <div className="connectomeview">
         {!dataReady && <div> Data is loading </div>}
-          {dataReady && this.state.showChord ? <ResponsiveChord
+          {(dataReady && this.state.showChord) ? <ResponsiveChord
             matrix={this.state.filtered.data}
             keys={this.state.filtered.labels}
             margin={{top: 200,right: 200,bottom: 200,left: 200}}
@@ -295,7 +272,7 @@ export default class ConnectomeView extends Component<connectomeViewProps,connec
             labelOffset={15}
             labelRotation={-90}
             labelTextColor="inherit:darker(1.7)"
-            colors= {this.colors}
+            colors={this.colors}
             isInteractive={true}
             arcHoverOpacity={0.9}
             arcHoverOthersOpacity={0.4}
@@ -303,23 +280,23 @@ export default class ConnectomeView extends Component<connectomeViewProps,connec
             ribbonHoverOthersOpacity={0.1}
             animate={false}
           /> :   <ResponsiveHeatMap
-          data={this.state.connectomeDataMat}
-          keys={this.state.filtered.labels}
-          indexBy="labelName"
-          margin={{"top": 120,"right": 80,"bottom": 30,"left": 160}}
-          forceSquare={false}
-          axisTop={{"orient": "top","tickSize": 5,"tickPadding": 5,"tickRotation": -55,"legend": "","legendOffset": 36}}
-          axisLeft={{"orient": "left","tickSize": 5,"tickPadding": 5,"tickRotation": 0,"legend": "","legendPosition": "center","legendOffset": -40}}
-          cellShape="rect"
-          colors="nivo"
-          cellBorderColor="inherit:darker(1.2)"
-          labelTextColor="inherit:darker(0.8)"
-          defs={[{"id": "lines","type": "patternLines","background": "inherit","color": "rgba(0, 0, 0, 0.1)","rotation": -45,"lineWidth": 4,"spacing": 7}]}
-          fill={[{"id": "lines"}]}
-          animate={false}
-          hoverTarget="rowColumn"
-          cellHoverOthersOpacity={0.3}
-      />         
+            data={this.state.connectomeDataMat}
+            keys={this.state.filtered.labels}
+            indexBy="labelName"
+            margin={{"top": 120,"right": 80,"bottom": 30,"left": 160}}
+            forceSquare={false}
+            axisTop={{"orient": "top","tickSize": 5,"tickPadding": 5,"tickRotation": -55,"legend": "","legendOffset": 36}}
+            axisLeft={{"orient": "left","tickSize": 5,"tickPadding": 5,"tickRotation": 0,"legend": "","legendPosition": "center","legendOffset": -40}}
+            cellShape="rect"
+            colors="nivo"
+            cellBorderColor="inherit:darker(1.2)"
+            labelTextColor="inherit:darker(0.8)"
+            defs={[{"id": "lines","type": "patternLines","background": "inherit","color": "rgba(0, 0, 0, 0.1)","rotation": -45,"lineWidth": 4,"spacing": 7}]}
+            fill={[{"id": "lines"}]}
+            animate={false}
+            hoverTarget="rowColumn"
+            cellHoverOthersOpacity={0.3}
+          />         
           }       
       </div>
     );
